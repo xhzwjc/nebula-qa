@@ -11,12 +11,12 @@ from urllib import request as urllib_request
 
 import allure
 
-from utils.yaml_util import read_extract, write_extract
+from utils.yaml_util import read_extract, write_extract, load_data_file
 from utils.log import logger
 
 MOCK_RESPONSES_FILE = Path("data/mock_responses.yaml")
 if MOCK_RESPONSES_FILE.exists():
-    _mock_data = json.loads(MOCK_RESPONSES_FILE.read_text(encoding="utf-8"))
+    _mock_data = load_data_file(MOCK_RESPONSES_FILE) or []
     MOCK_RESPONSES = {
         f"{item['method'].upper()} {item['url']}": item for item in _mock_data
     }

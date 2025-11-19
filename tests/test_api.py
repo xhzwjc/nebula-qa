@@ -1,12 +1,11 @@
 """High level API test covering all YAML-driven cases."""
-import json
 import pytest
 import allure
 
 from utils.request_util import RequestUtil
+from utils.yaml_util import load_data_file
 
-with open("data/api_cases.yaml", encoding="utf-8") as f:
-    cases = json.load(f)
+cases = load_data_file("data/api_cases.yaml") or []
 
 
 @pytest.mark.parametrize("case", cases)

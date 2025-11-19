@@ -1,3 +1,22 @@
+# Python cache
 __pycache__/
+*.py[cod]
+*.pyo
+
+# Test and coverage artifacts
+.pytest_cache/
 reports/
+allure-report/
+allure-results/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# IDE files
+.vscode/
+.idea/
+
+# Extracted variables generated at runtime
 extract.yaml

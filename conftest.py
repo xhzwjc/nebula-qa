@@ -1,5 +1,6 @@
-import json
 import pytest
+
+from utils.yaml_util import load_data_file
 
 
 def pytest_addoption(parser):
@@ -9,6 +10,7 @@ def pytest_addoption(parser):
 @pytest.fixture(scope="session")
 def env_config(request):
     env = request.config.getoption("--env")
-    with open("config/env_config.yaml", encoding="utf-8") as f:
-        envs = json.load(f)
+    envs = load_data_file("config/env_config.yaml") or {}
+    if env not in envs:
+        raise KeyError(f"未知环境: {env}")
     return envs[env]
