@@ -1,21 +1,36 @@
-import yaml
-import os
+"""Utility helpers for persisting extracted variables without PyYAML."""
+from __future__ import annotations
 
-EXTRACT_FILE = "extract.yaml"
+import json
+from pathlib import Path
+from typing import Any, Dict, Optional
 
-def write_extract(data: dict):
-    with open(EXTRACT_FILE, "r+", encoding="utf-8") as f:
-        try:
-            old = yaml.safe_load(f) or {}
-        except:
-            old = {}
-        old.update(data)
-        f.seek(0)
-        yaml.dump(old, f)
+EXTRACT_FILE = Path("extract.yaml")
 
-def read_extract(key=None):
-    if not os.path.exists(EXTRACT_FILE):
-        return {} if key is None else None
-    with open(EXTRACT_FILE, "r", encoding="utf-8") as f:
-        data = yaml.safe_load(f) or {}
-        return data if key is None else data.get(key)
+
+def _load_extract() -> Dict[str, Any]:
+    if not EXTRACT_FILE.exists():
+        return {}
+    text = EXTRACT_FILE.read_text(encoding="utf-8").strip()
+    if not text:
+        return {}
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        return {}
+
+
+def write_extract(data: Dict[str, Any]) -> None:
+    store = _load_extract()
+    store.update(data)
+    EXTRACT_FILE.write_text(
+        json.dumps(store, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+
+def read_extract(key: Optional[str] = None):
+    store = _load_extract()
+    if key is None:
+        return store
+    return store.get(key)

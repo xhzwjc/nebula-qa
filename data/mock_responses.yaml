@@ -1,0 +1,37 @@
+[
+  {
+    "method": "POST",
+    "url": "/auth/app/login",
+    "status_code": 200,
+    "body": {
+      "code": 200,
+      "data": {
+        "access_token": "fake-token"
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "url": "/user/message/list",
+    "status_code": 200,
+    "body": {
+      "code": 200,
+      "data": {
+        "pageNum": 1,
+        "pageSize": 10,
+        "list": []
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "url": "/user/userAddr/list",
+    "status_code": 200,
+    "body": {
+      "code": 200,
+      "data": {
+        "records": []
+      }
+    }
+  }
+]
