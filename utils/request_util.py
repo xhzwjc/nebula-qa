@@ -78,22 +78,49 @@ class RequestUtil:
         return self.base_url.rstrip("/") + url
 
     def extract_value(self, res: _SimpleResponse, expr: str):
-        if not expr.startswith("content."):
+        path = [segment for segment in expr.split(".") if segment]
+        if not path:
             return None
-        path = expr.replace("content.", "").split(".")
         try:
             data = res.json()
         except Exception:
             logger.error("响应非JSON: %s", res.text)
             raise
 
+        if path[0] == "content" and (
+            not isinstance(data, dict) or "content" not in data
+        ):
+            path = path[1:]
+
         current: Any = data
-        for key in path:
+        for idx, key in enumerate(path):
+            if isinstance(current, str):
+                stripped = current.strip()
+                if not stripped:
+                    raise TypeError(f"路径错误: 在 {key} 前遇到空字符串")
+                try:
+                    current = json.loads(stripped)
+                except json.JSONDecodeError as exc:  # type: ignore[attr-defined]
+                    raise TypeError(
+                        f"路径错误: 在 {key} 前无法将字符串解析为JSON"
+                    ) from exc
+
+            if isinstance(current, list):
+                try:
+                    index = int(key)
+                except ValueError as exc:
+                    raise TypeError(f"路径错误: 需要列表索引却得到 {key}") from exc
+                if not (-len(current) <= index < len(current)):
+                    raise IndexError(f"列表索引越界: {index}")
+                current = current[index]
+                continue
+
             if not isinstance(current, dict):
                 raise TypeError(f"路径错误: 在 {key} 前已不是dict，而是 {type(current)}")
             if key not in current:
                 raise KeyError(f"键不存在: {key}")
             current = current[key]
+
         return current
 
     def assert_result(self, case: Dict[str, Any], res: _SimpleResponse) -> None:
