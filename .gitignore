@@ -1,0 +1,13 @@
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.env
+.pytest_cache/
+
+# Allure
+allure-report/
+allure-results/
+
+# Config (隐私保护)
+config/secrets.yaml
