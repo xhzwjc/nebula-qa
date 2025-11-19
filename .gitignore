@@ -1,39 +1,22 @@
-# --- Python 基础垃圾文件 ---
+# Python cache
 __pycache__/
 *.py[cod]
-*$py.class
+*.pyo
 
-# --- 虚拟环境 (截图里你的文件夹叫 ven) ---
-# 这是最重要的一项！绝对不要上传虚拟环境
-ven/
-venv/
-.venv/
-env/
-
-# --- Pytest 缓存 ---
+# Test and coverage artifacts
 .pytest_cache/
-.coverage
-htmlcov/
-
-# --- 测试报告与日志 (每次运行都会变，不要上传) ---
 reports/
-logs/
-log/
-allure-results/
 allure-report/
-*.log
+allure-results/
 
-# --- IDE 配置 (PyCharm/VSCode 配置，因人而异，不需要上传) ---
-.idea/
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# IDE files
 .vscode/
-*.swp
+.idea/
 
-# --- 敏感配置 (大厂安全规范) ---
-# 建议：如果 config 里包含真实的线上账号密码，请过滤掉
-# 你可以上传一个 config_template.yaml 给别人看格式
-# config/env_config.yaml
-# config/global_config.yaml
-
-# --- 操作系统生成的垃圾 ---
-.DS_Store
-Thumbs.db
+# Extracted variables generated at runtime
+extract.yaml

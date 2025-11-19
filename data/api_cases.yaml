@@ -1,36 +1,59 @@
-# data/api_cases.yaml
-- name: "01-用户登录"
-  method: POST
-  url: /auth/app/login
-  headers:
-    Content-Type: application/json
-  json:
-    mobile: "19825852335"
-    code: "6543"
-    type: 1
-  extract:
-    token: content.data.access_token   # 绝对正确！
-  validate:
-    - equals:
-        code: 200
-
-- name: "02-消息列表"
-  method: GET
-  url: /user/message/list
-  params:
-    pageNum: 1
-    pageSize: 10
-  headers:
-    house-token: ${token}
-  validate:
-    - equals:
-        code: 200
-
-- name: "03-地址列表"
-  method: GET
-  url: /user/userAddr/list
-  headers:
-    house-token: ${token}
-  validate:
-    - equals:
-        code: 200
+[
+  {
+    "name": "01-用户登录",
+    "method": "POST",
+    "url": "/auth/app/login",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "json": {
+      "mobile": "19825852335",
+      "code": "6543",
+      "type": 1
+    },
+    "extract": {
+      "token": "content.data.access_token"
+    },
+    "validate": [
+      {
+        "equals": {
+          "code": 200
+        }
+      }
+    ]
+  },
+  {
+    "name": "02-消息列表",
+    "method": "GET",
+    "url": "/user/message/list",
+    "params": {
+      "pageNum": 1,
+      "pageSize": 10
+    },
+    "headers": {
+      "house-token": "${token}"
+    },
+    "validate": [
+      {
+        "equals": {
+          "code": 200
+        }
+      }
+    ]
+  },
+  {
+    "name": "03-地址列表",
+    "method": "GET",
+    "url": "/user/userAddr/list",
+    "headers": {
+      "house-token": "${token}"
+    },
+    "validate": [
+      {
+        "equals": {
+          "code": 200
+        }
+      }
+    ]
+  }
+]
