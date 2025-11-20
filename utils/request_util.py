@@ -30,7 +30,10 @@ class RequestUtil:
             if re.search(pattern, obj):
                 m = re.search(pattern, obj)
                 key = m.group(1)
+                
+                # 从extract文件中读取
                 value = read_extract(key)
+                
                 if value is None:
                     # 第一个用例（登录）还没执行时，token 不存在，这里先不报错
                     if key == "token" and "01-用户登录" in case_name:

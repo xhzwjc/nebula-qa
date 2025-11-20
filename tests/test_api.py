@@ -12,7 +12,7 @@ with open("data/api_cases.yaml", encoding="utf-8") as f:
 
 # 参数化测试用例
 @pytest.mark.parametrize("case", cases, ids=[case.get('name', f'case_{i}') for i, case in enumerate(cases)])
-def test_api(case, env_config):   # ← 这里必须保留两个参数
+def test_api(case, env_config):
     request = RequestUtil()
     request.base_url = env_config["base_url"]
     
