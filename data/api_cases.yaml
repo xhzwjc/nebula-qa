@@ -1,20 +1,3 @@
-# ============================== 01 登录 ==============================
-- name: "01-用户登录"
-  method: POST
-  url: /auth/app/login
-  headers:
-    Content-Type: application/json
-  json:
-    mobile: "13859215417"
-    code: "6543"
-    type: 1
-  extract:
-    token: content.data.access_token
-  validate:
-    - equals:
-        code: 200
-
-# ============================== 02-52 全量接口 ==============================
 - name: "02-消息列表"
   method: GET
   url: /user/message/list

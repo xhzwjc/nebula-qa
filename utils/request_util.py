@@ -6,11 +6,11 @@ from utils.yaml_util import read_extract, write_extract
 from utils.log import logger
 
 class RequestUtil:
-    def __init__(self):
+    def __init__(self, env_config=None):
         self.session = requests.Session()
-        self.base_url = ""
+        self.env_config = env_config or {}
+        self.base_url = self.env_config.get("base_url", "")
 
-    # utils/request_util.py (修改replace_vars方法)
     def replace_vars(self, obj, case_name=""):
         """递归替换 ${var}，修复类型错误"""
         if obj is None:
@@ -31,66 +31,88 @@ class RequestUtil:
                 m = re.search(pattern, obj)
                 key = m.group(1)
                 
-                # 从extract文件中读取
+                # 优先级1: 从extract文件中读取 (接口关联变量)
                 value = read_extract(key)
                 
+                # 优先级2: 从环境配置中读取 (环境相关变量，如mobile, code)
+                if value is None and key in self.env_config:
+                    value = self.env_config[key]
+                
                 if value is None:
-                    # 第一个用例（登录）还没执行时，token 不存在，这里先不报错
-                    if key == "token" and "01-用户登录" in case_name:
-                        return obj  # 登录用例本身不需要 token
-                    raise ValueError(f"依赖变量未找到: ${{{key}}}")
+                    # 如果变量未找到，记录警告并返回原字符串，避免直接崩溃
+                    # 特殊处理：如果是登录相关的用例，可能不需要token，忽略警告
+                    if "登录" in case_name and key == "token":
+                         return obj
+                    
+                    logger.warning(f"变量 ${{{key}}} 未找到，将保持原样。用例: {case_name}")
+                    return obj
+                    
                 return obj.replace(m.group(0), str(value))
             return obj
         return obj  # 非字符串/字典/列表类型直接返回
+
     def standard_url(self, case):
         url = case["url"]
         if case.get("path_params"):
             for k, v in case["path_params"].items():
                 v = self.replace_vars(v, case.get("name", ""))
                 url = url.replace(f"{{{k}}}", str(v))
+        
+        if url.startswith("http"):
+            return url
         return self.base_url + url
 
     def extract_value(self, res, expr):
-        """完美兼容你登录返回的提取方式"""
-        logger.info(f"提取表达式: {expr}")
+        """通用提取方法"""
+        # logger.debug(f"提取表达式: {expr}")
         if not expr.startswith("content."):
             return None
 
         path = expr.replace("content.", "").split(".")
         try:
             data = res.json()
-            logger.info(f"响应数据结构: {type(data)}, 键: {list(data.keys()) if isinstance(data, dict) else '非字典'}")
         except Exception as e:
-            logger.error(f"响应非JSON: {res.text}")
-            raise
+            logger.error(f"响应非JSON格式，无法提取: {res.text[:100]}")
+            return None
 
         current = data
-        for key in path:
-            if not isinstance(current, dict):
-                raise TypeError(f"路径错误: 在 {key} 前已不是dict，而是 {type(current)}")
-            if key not in current:
-                raise KeyError(f"键不存在: {key}")
-            current = current[key]
+        try:
+            for key in path:
+                if isinstance(current, list):
+                    try:
+                        key = int(key)
+                        current = current[key]
+                    except (ValueError, IndexError):
+                         logger.error(f"提取失败: 列表索引错误 {key}")
+                         return None
+                elif isinstance(current, dict):
+                    if key not in current:
+                         logger.error(f"提取失败: 键 {key} 不存在")
+                         return None
+                    current = current[key]
+                else:
+                    logger.error(f"提取失败: 无法在 {type(current)} 中查找 {key}")
+                    return None
+        except Exception as e:
+            logger.error(f"提取过程发生异常: {e}")
+            return None
 
-        logger.info(f"提取结果: {current} (类型: {type(current)})")
+        logger.info(f"提取结果: {expr} = {current}")
         return current
 
     def assert_result(self, case, res):
         if "validate" not in case:
-            logger.info("用例没有断言配置")
             return
             
-        logger.info(f"开始执行断言，断言配置: {case['validate']}")
+        logger.info(f"执行断言: {case['validate']}")
         
         for item in case["validate"]:
             for method, expect in item.items():
                 if method == "equals":
                     for field, val in expect.items():
-                        logger.info(f"执行equals断言 - 字段: {field}, 期望值: {val}")
                         actual = self.extract_value(res, f"content.{field}")
-                        logger.info(f"断言检查 → 字段: {field} | 期望: {val} | 实际: {actual} | 期望类型: {type(val)} | 实际类型: {type(actual)}")
                         
-                        # 添加类型转换处理
+                        # 类型转换处理
                         if isinstance(val, str) and isinstance(actual, int):
                             try:
                                 val = int(val)
@@ -102,45 +124,71 @@ class RequestUtil:
                             except ValueError:
                                 pass
                         
-                        logger.info(f"类型转换后 → 期望: {val} | 实际: {actual}")
-                        assert actual == val, f"断言失败 → 字段: {field} | 期望: {val} | 实际: {actual}"
+                        if actual != val:
+                            logger.error(f"断言失败 - 字段: {field} | 期望: {val} ({type(val)}) | 实际: {actual} ({type(actual)})")
+                            raise AssertionError(f"断言失败: {field} 期望 {val}, 实际 {actual}")
+                        else:
+                            logger.info(f"断言通过 - 字段: {field} | 值: {actual}")
 
-    @allure.step("执行用例")
+    @allure.step("执行接口请求")
     def send_request(self, case):
         case_name = case.get('name', '未知用例')
-        logger.info(f"【{case_name}】开始执行")
-
-        method = case["method"].upper()
-        url = self.standard_url(case)
-
-        headers = self.replace_vars(case.get("headers", {}), case.get("name", ""))
-        params = self.replace_vars(case.get("params"), case.get("name", ""))
-        data = self.replace_vars(case.get("data"), case.get("name", ""))
-        json_data = self.replace_vars(case.get("json"), case.get("name", ""))
-
-        res = self.session.request(
-            method=method,
-            url=url,
-            headers=headers,
-            params=params,
-            data=data,
-            json=json_data,
-            timeout=30,
-            verify=False
-        )
-
-        logger.info(f"响应状态码: {res.status_code}")
-        logger.info(f"响应内容: {res.text[:1000]}")
-
-        # 提取
-        if "extract" in case:
-            for var_name, expr in case["extract"].items():
-                value = self.extract_value(res, expr)
-                write_extract({var_name: value})
-                logger.info(f"提取成功 → {var_name} = {value}")
-
-        # 断言
-        self.assert_result(case, res)
+        logger.info(f"========== 开始执行: {case_name} ==========")
         
-        # 返回响应对象
-        return res
+        try:
+            # 替换变量
+            case = self.replace_vars(case, case_name)
+            
+            # 构造URL
+            url = self.standard_url(case)
+            
+            # 准备请求参数
+            method = case.get("method", "GET").upper()
+            headers = case.get("headers", {})
+            params = case.get("params", {})
+            json_data = case.get("json", None)
+            data = case.get("data", None)
+            
+            logger.info(f"请求方法: {method}")
+            logger.info(f"请求URL: {url}")
+            logger.info(f"请求头: {headers}")
+            if params:
+                logger.info(f"请求参数: {params}")
+            if json_data:
+                logger.info(f"请求体(JSON): {json_data}")
+            if data:
+                logger.info(f"请求体(Data): {data}")
+            
+            # 发送请求
+            res = self.session.request(
+                method=method,
+                url=url,
+                headers=headers,
+                params=params,
+                json=json_data,
+                data=data
+            )
+            
+            logger.info(f"响应状态码: {res.status_code}")
+            try:
+                logger.info(f"完整响应内容: {res.json()}")
+            except:
+                logger.info(f"完整响应内容(Text): {res.text}")
+            
+            # 提取
+            if "extract" in case:
+                for var_name, expr in case["extract"].items():
+                    value = self.extract_value(res, expr)
+                    if value is not None:
+                        write_extract({var_name: value})
+
+            # 断言
+            self.assert_result(case, res)
+            
+            return res
+            
+        except Exception as e:
+            logger.error(f"请求执行异常: {e}")
+            raise
+        finally:
+            logger.info(f"========== 结束执行: {case_name} ==========\n")

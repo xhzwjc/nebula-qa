@@ -1,15 +1,23 @@
 dev:
   base_url: https://dev-api.example.com
   timeout: 10
+  mobile: "13859215417"
+  code: "6543"
 
 test:
   base_url: http://api-test.2house.com
   timeout: 15
+  mobile: "13859215417"
+  code: "6543"
 
 pre:
   base_url: https://pre-api.example.com
   timeout: 10
+  mobile: "13859215417"
+  code: "6543"
 
 prod:
   base_url: https://api.example.com
   timeout: 8
+  mobile: "19825852335"
+  code: "6543"
